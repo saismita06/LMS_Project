@@ -1,72 +1,78 @@
-import React, { useContext } from 'react'
-import { Link } from 'react-router-dom'
-import { assets } from '../../assets/assets'
-import { AppContext } from '../../context/AppContext'
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import { assets } from "../../assets/assets";
+import { useAppContext } from "../../context/AppContext";
 
 const CourseCard = ({ course }) => {
+  const { currency, calculateRating } = useAppContext();
+  const navigate = useNavigate();
 
-    const { currency, calculateRating } = useContext(AppContext)
+  if (!course) return null;
 
-    // 🔴 SAFETY CHECK
-    if (!course) return null
+  const rating = calculateRating(course) || 0;
+  const price = course.coursePrice || 0;
+  const discount = course.discount || 0;
+  const finalPrice = (price - (discount * price) / 100).toFixed(2);
 
-    return (
-        <Link
-            onClick={() => scrollTo(0, 0)}
-            to={'/course/' + course._id}
-            className="border border-gray-500/30 pb-6 overflow-hidden rounded-lg"
-        >
-            <img
-                className="w-full"
-                src={course.courseThumbnail}
-                alt=""
-            />
+  const goToCourse = () => {
+    navigate(`/course/${course._id}`);
+    window.scrollTo(0, 0);
+  };
 
-            <div className="p-3 text-left">
-                <h3 className="text-base font-semibold">
-                    {course.courseTitle}
-                </h3>
+  return (
+    <div
+      onClick={goToCourse}
+      className="border border-gray-500/30 pb-6 overflow-hidden rounded-lg cursor-pointer hover:shadow-md transition-all duration-300"
+    >
+      {/* FIX: Ensure the src points to the unique course data first */}
+      <img
+        className="w-full h-48 object-cover"
+        src={course.courseThumbnail ? course.courseThumbnail : assets.course_1_thumbnail}
+        alt={course.courseTitle}
+        onError={(e) => {
+          e.target.src = assets.course_1_thumbnail; // Only switch if the link actually breaks
+        }}
+      />
 
-                {/* ✅ FIXED LINE */}
-                <p className="text-gray-500">
-                    {course.educator?.name || 'Unknown Educator'}
-                </p>
+      <div className="p-3 text-left">
+        <h3 className="text-base font-semibold truncate">
+          {course.courseTitle}
+        </h3>
 
-                <div className="flex items-center space-x-2">
-                    <p>{calculateRating(course)}</p>
+        <p className="text-gray-500 text-sm">
+          {course.educator?.name || "Unknown Educator"}
+        </p>
 
-                    <div className="flex">
-                        {[...Array(5)].map((_, i) => (
-                            <img
-                                key={i}
-                                className="w-3.5 h-3.5"
-                                src={
-                                    i < Math.floor(calculateRating(course))
-                                        ? assets.star
-                                        : assets.star_blank
-                                }
-                                alt=""
-                            />
-                        ))}
-                    </div>
+        <div className="flex items-center space-x-2 mt-1">
+          <p className="font-medium text-yellow-600">{rating.toFixed(1)}</p>
 
-                    {/* ✅ SAFE LENGTH ACCESS */}
-                    <p className="text-gray-500">
-                        ({course.courseRatings?.length || 0})
-                    </p>
-                </div>
+          <div className="flex">
+            {[...Array(5)].map((_, i) => (
+              <img
+                key={i}
+                className="w-3.5 h-3.5"
+                src={i < Math.floor(rating) ? assets.star : assets.star_blank}
+                alt="star"
+              />
+            ))}
+          </div>
 
-                {/* ✅ SAFE PRICE CALCULATION */}
-                <p className="text-base font-semibold text-gray-800">
-                    {currency}
-                    {(
-                        course.coursePrice -
-                        (course.discount || 0) * course.coursePrice / 100
-                    ).toFixed(2)}
-                </p>
-            </div>
-        </Link>
-    )
-}
+          <p className="text-gray-500 text-xs">
+            ({course.courseRatings?.length || 0})
+          </p>
+        </div>
 
-export default CourseCard
+        <p className="text-base font-semibold text-gray-800 mt-2">
+          {currency}{finalPrice}
+        </p>
+      </div>
+    </div>
+  );
+};
+
+export default CourseCard;
+
+
+
+
+

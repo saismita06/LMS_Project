@@ -1,14 +1,11 @@
-import express from 'express'
-import { getAllCourse, getCourseId } from '../controllers/courseController.js';
+// routes/courseRoute.js
+import express from "express";
+import { getAllCourse, getCourseId } from "../controllers/courseController.js";
 
+const courseRouter = express.Router();
 
-const courseRouter = express.Router()
-
-// Get All Course
-courseRouter.get('/all', getAllCourse)
-
-// Get Course Data By Id
-courseRouter.get('/:id', getCourseId)
-
+courseRouter.get("/all", getAllCourse);
+courseRouter.get("/:id", getCourseId); // This MUST be /:id to match the controller
 
 export default courseRouter;
+

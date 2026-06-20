@@ -1,36 +1,39 @@
-import React, { useContext, useEffect, useState } from 'react';
-import { AppContext } from '../../context/AppContext';
+import React, { useEffect, useState } from 'react';
+import { useAppContext } from "../../context/AppContext";
+import { assets } from '../../assets/assets'; // ✅ Added this import
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import Loading from '../../components/student/Loading';
 
 const MyCourses = () => {
 
-  const { backendUrl, isEducator, currency, getToken } = useContext(AppContext)
+  // ✅ FIXED: Use the custom hook directly instead of useContext(AppContext)
+  const { backendUrl, isEducator, currency, getToken, navigate } = useAppContext();
 
-  const [courses, setCourses] = useState(null)
+  const [courses, setCourses] = useState(null);
 
   const fetchEducatorCourses = async () => {
-
     try {
+      const token = await getToken();
 
-      const token = await getToken()
+      // Ensure this endpoint matches your backend route (e.g., /api/educator/courses or /api/educator/my-courses)
+      const { data } = await axios.get(backendUrl + '/api/educator/courses', { 
+        headers: { Authorization: `Bearer ${token}` } 
+      });
 
-      const { data } = await axios.get(backendUrl + '/api/educator/courses', { headers: { Authorization: `Bearer ${token}` } })
-
-      data.success && setCourses(data.courses)
-
+      if (data.success) {
+        setCourses(data.courses);
+      }
     } catch (error) {
-      toast.error(error.message)
+      toast.error(error.message);
     }
-
   }
 
   useEffect(() => {
     if (isEducator) {
-      fetchEducatorCourses()
+      fetchEducatorCourses();
     }
-  }, [isEducator])
+  }, [isEducator]);
 
   return courses ? (
     <div className="h-screen flex flex-col items-start justify-between md:p-8 md:pb-0 p-4 pt-8 pb-0">
@@ -53,8 +56,13 @@ const MyCourses = () => {
                     <img src={course.courseThumbnail} alt="Course Image" className="w-16" />
                     <span className="truncate hidden md:block">{course.courseTitle}</span>
                   </td>
-                  <td className="px-4 py-3">{currency} {Math.floor(course.enrolledStudents.length * (course.coursePrice - course.discount * course.coursePrice / 100))}</td>
-                  <td className="px-4 py-3">{course.enrolledStudents.length}</td>
+                  <td className="px-4 py-3">
+                    {/* Dynamic Earnings Calculation */}
+                    {currency} {Math.floor(course.enrolledStudents.length * (course.coursePrice - course.discount * course.coursePrice / 100))}
+                  </td>
+                  <td className="px-4 py-3">
+                    {course.enrolledStudents.length}
+                  </td>
                   <td className="px-4 py-3">
                     {new Date(course.createdAt).toLocaleDateString()}
                   </td>

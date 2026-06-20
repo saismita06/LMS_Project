@@ -1,58 +1,60 @@
-import React, { useContext, useEffect, useState } from 'react'
-import Footer from '../../components/student/Footer'
-import { assets } from '../../assets/assets'
-import CourseCard from '../../components/student/CourseCard';
-import { AppContext } from '../../context/AppContext';
-import { useParams } from 'react-router-dom';
-import SearchBar from '../../components/student/SearchBar';
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import CourseCard from "../../components/student/CourseCard";
+import { useAppContext } from "../../context/AppContext";
+import Loading from "../../components/student/Loading";
+import { toast } from "react-toastify";
 
 const CoursesList = () => {
+  const { backendUrl } = useAppContext();
+  const [courses, setCourses] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-    const { input } = useParams()
+  // ✅ FETCH REAL DATA FROM BACKEND
+  const fetchAllCourses = async () => {
+    try {
+      const { data } = await axios.get(`${backendUrl}/api/course/all`);
+      
+      if (data.success) {
+        setCourses(data.courses);
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      console.error("Error fetching courses:", error);
+      toast.error(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const { allCourses, navigate } = useContext(AppContext)
+  useEffect(() => {
+    fetchAllCourses();
+  }, []);
 
-    const [filteredCourse, setFilteredCourse] = useState([])
+  if (loading) return <Loading />;
 
-    useEffect(() => {
+  return (
+    <div className="md:px-36 px-8 py-10">
+      <h1 className="text-2xl font-semibold text-gray-800 mb-8">All Courses</h1>
+      
+      {courses.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {courses.map((course) => (
+            <CourseCard key={course._id} course={course} />
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-20">
+          <p className="text-gray-500 text-lg">No courses available at the moment.</p>
+        </div>
+      )}
+    </div>
+  );
+};
 
-        if (allCourses && allCourses.length > 0) {
+export default CoursesList;
 
-            const tempCourses = allCourses.slice()
 
-            input
-                ? setFilteredCourse(
-                    tempCourses.filter(
-                        item => item.courseTitle.toLowerCase().includes(input.toLowerCase())
-                    )
-                )
-                : setFilteredCourse(tempCourses)
 
-        }
 
-    }, [allCourses, input])
-
-    return (
-        <>
-            <div className="relative md:px-36 px-8 pt-20 text-left">
-                <div className='flex md:flex-row flex-col gap-6 items-start justify-between w-full'>
-                    <div>
-                        <h1 className='text-4xl font-semibold text-gray-800'>Course List</h1>
-                        <p className='text-gray-500'><span onClick={() => navigate('/')} className='text-blue-600 cursor-pointer'>Home</span> / <span>Course List</span></p>
-                    </div>
-                    <SearchBar data={input} />
-                </div>
-                {input && <div className='inline-flex items-center gap-4 px-4 py-2 border mt-8 -mb-8 text-gray-600'>
-                    <p>{input}</p>
-                    <img onClick={() => navigate('/course-list')} className='cursor-pointer' src={assets.cross_icon} alt="" />
-                </div>}
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 my-16 gap-3 px-2 md:p-0">
-                    {filteredCourse.map((course, index) => <CourseCard key={index} course={course} />)}
-                </div>
-            </div>
-            <Footer />
-        </>
-    )
-}
-
-export default CoursesList 

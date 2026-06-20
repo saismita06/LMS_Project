@@ -1,15 +1,24 @@
-import express from 'express'
-import { addUserRating, getUserCourseProgress, getUserData, purchaseCourse, updateUserCourseProgress, userEnrolledCourses } from '../controllers/userController.js';
+import express from "express";
+import {
+  getUserData,
+  purchaseCourse,
+  userEnrolledCourses,
+  updateUserCourseProgress,
+  getUserCourseProgress,
+  addUserRating,
+} from "../controllers/userController.js";
+import { protectUser } from "../middlewares/authMiddleware.js";
 
+const userRouter = express.Router();
 
-const userRouter = express.Router()
+userRouter.get("/data", protectUser, getUserData);
+userRouter.post("/purchase", protectUser, purchaseCourse);
+userRouter.get("/enrolled-courses", protectUser, userEnrolledCourses);
 
-// Get user Data
-userRouter.get('/data', getUserData)
-userRouter.post('/purchase', purchaseCourse)
-userRouter.get('/enrolled-courses', userEnrolledCourses)
-userRouter.post('/update-course-progress', updateUserCourseProgress)
-userRouter.post('/get-course-progress', getUserCourseProgress)
-userRouter.post('/add-rating', addUserRating)
+// ✅ MATCHES Player.jsx fetch call
+userRouter.post("/update-course-progress", protectUser, updateUserCourseProgress);
+
+userRouter.post("/course-progress/get", protectUser, getUserCourseProgress);
+userRouter.post("/rating", protectUser, addUserRating);
 
 export default userRouter;

@@ -1,45 +1,40 @@
-import Course from "../models/Course.js"
+import Course from "../models/Course.js";
 
-
-// Get All Courses
+// ✅ 1. Get All Courses
 export const getAllCourse = async (req, res) => {
-    try {
+  try {
+    const courses = await Course.find()
+      .select(['-courseContent', '-enrolledStudents'])
+      .populate({ path: 'educator', select: '-password' });
 
-        const courses = await Course.find({ isPublished: true })
-            .select(['-courseContent', '-enrolledStudents'])
-            .populate({ path: 'educator', select: '-password' })
+    res.json({ success: true, courses });
+  } catch (error) {
+    res.json({ success: false, message: error.message });
+  }
+};
 
-        res.json({ success: true, courses })
-
-    } catch (error) {
-        res.json({ success: false, message: error.message })
-    }
-
-}
-
-// Get Course by Id
+// ✅ 2. Get Course by Id (Renamed to match route import)
+// controllers/courseController.js
 export const getCourseId = async (req, res) => {
+  try {
+    const { id } = req.params; 
 
-    const { id } = req.params
+    // ✅ Use findById directly. Since your test ID is a string, 
+    // it will work as long as the document exists in MongoDB with that _id.
+    const course = await Course.findById(id).populate({
+        path: 'educator',
+        select: '-password'
+    });
 
-    try {
-
-        const courseData = await Course.findById(id)
-            .populate({ path: 'educator'})
-
-        // Remove lectureUrl if isPreviewFree is false
-        courseData.courseContent.forEach(chapter => {
-            chapter.chapterContent.forEach(lecture => {
-                if (!lecture.isPreviewFree) {
-                    lecture.lectureUrl = "";
-                }
-            });
-        });
-
-        res.json({ success: true, courseData })
-
-    } catch (error) {
-        res.json({ success: false, message: error.message })
+    if (!course) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Course not found" 
+      });
     }
 
-} 
+    res.status(200).json({ success: true, course });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

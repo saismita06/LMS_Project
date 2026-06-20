@@ -1,103 +1,79 @@
-import React, { useContext, useEffect, useState } from 'react'
-import { AppContext } from '../../context/AppContext'
-import axios from 'axios'
-import { Line } from 'rc-progress';
-import Footer from '../../components/student/Footer';
+import React, { useEffect, useState } from "react";
+import { useAuth } from "@clerk/clerk-react";
+import { Line } from "rc-progress";
+import Footer from "../../components/student/Footer";
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 
 const MyEnrollments = () => {
+  const navigate = useNavigate();
+  const { getToken } = useAuth();
+  const [enrolledCourses, setEnrolledCourses] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-    const { userData, enrolledCourses, fetchUserEnrolledCourses, navigate, backendUrl, getToken, calculateCourseDuration, calculateNoOfLectures } = useContext(AppContext)
+  const fetchEnrolledCourses = async () => {
+    try {
+      const token = await getToken();
+      const res = await fetch("http://localhost:5000/api/user/enrolled-courses", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.success) {
+        setEnrolledCourses(data.enrolledCourses.filter(item => item !== null));
+      }
+    } catch (error) {
+      toast.error("Failed to load enrollments");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const [progressArray, setProgressData] = useState([])
+  useEffect(() => { fetchEnrolledCourses(); }, []);
 
-    const getCourseProgress = async () => {
-        try {
-            const token = await getToken();
+  if (loading) return <p className="text-center mt-20">Loading...</p>;
 
-            // Use Promise.all to handle multiple async operations
-            const tempProgressArray = await Promise.all(
-                enrolledCourses.map(async (course) => {
-                    const { data } = await axios.post(
-                        `${backendUrl}/api/user/get-course-progress`,
-                        { courseId: course._id },
-                        { headers: { Authorization: `Bearer ${token}` } }
-                    );
+  return (
+    <>
+      <div className="md:px-36 px-8 pt-10 min-h-[70vh] pb-20 bg-white">
+        <h1 className="text-3xl font-bold mb-8">My Enrollments</h1>
+        <div className="grid grid-cols-1 gap-6">
+          {enrolledCourses.map((item, index) => {
+            const course = item.courseId || item;
+            
+            // --- MATH FIX ---
+            const totalLectures = course.courseContent?.reduce((acc, chap) => acc + (chap.chapterContent?.length || 0), 0) || 0;
+            const completedCount = item.completedLectures?.length || 0;
+            const progress = totalLectures > 0 ? Math.round((completedCount / totalLectures) * 100) : 0;
 
-                    // Calculate total lectures
-                    let totalLectures = calculateNoOfLectures(course);
-
-                    const lectureCompleted = data.progressData ? data.progressData.lectureCompleted.length : 0;
-                    return { totalLectures, lectureCompleted };
-                })
+            return (
+              <div key={index} className="border p-4 flex flex-col md:flex-row gap-6 items-center rounded-2xl shadow-sm">
+                <div className="w-full md:w-48 h-28 flex-shrink-0">
+                  <img
+                    src={course.courseThumbnail}
+                    alt="thumbnail"
+                    className="w-full h-full object-cover rounded-xl border"
+                    onError={(e) => { e.target.src = "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=480&auto=format&fit=crop"; }}
+                  />
+                </div>
+                <div className="flex-1 w-full">
+                  <h2 className="font-bold text-xl">{course.courseTitle || "Course"}</h2>
+                  <p className="text-sm text-gray-500 mb-4">{totalLectures} Lessons • {completedCount} Completed</p>
+                  <div className="flex justify-between mb-2">
+                    <span className="text-xs font-bold text-blue-600">{progress}% Completed</span>
+                  </div>
+                  <Line percent={progress} strokeWidth={3} strokeColor="#2563eb" trailColor="#f1f5f9" />
+                </div>
+                <button onClick={() => navigate(`/player/${course._id}`)} className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold">
+                  {progress > 0 ? "Continue" : "Start"}
+                </button>
+              </div>
             );
+          })}
+        </div>
+      </div>
+      <Footer />
+    </>
+  );
+};
 
-            setProgressData(tempProgressArray);
-        } catch (error) {
-            toast.error(error.message);
-        }
-    };
-
-    useEffect(() => {
-        if (userData) {
-            fetchUserEnrolledCourses()
-        }
-    }, [userData])
-
-    useEffect(() => {
-
-        if (enrolledCourses.length > 0) {
-            getCourseProgress()
-        }
-
-    }, [enrolledCourses])
-
-    return (
-        <>
-
-            <div className='md:px-36 px-8 pt-10'>
-
-                <h1 className='text-2xl font-semibold'>My Enrollments</h1>
-
-                <table className="md:table-auto table-fixed w-full overflow-hidden border mt-10">
-                    <thead className="text-gray-900 border-b border-gray-500/20 text-sm text-left max-sm:hidden">
-                        <tr>
-                            <th className="px-4 py-3 font-semibold truncate">Course</th>
-                            <th className="px-4 py-3 font-semibold truncate max-sm:hidden">Duration</th>
-                            <th className="px-4 py-3 font-semibold truncate max-sm:hidden">Completed</th>
-                            <th className="px-4 py-3 font-semibold truncate">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody className="text-gray-700">
-                        {enrolledCourses.map((course, index) => (
-                            <tr key={index} className="border-b border-gray-500/20">
-                                <td className="md:px-4 pl-2 md:pl-4 py-3 flex items-center space-x-3 ">
-                                    <img src={course.courseThumbnail} alt="" className="w-14 sm:w-24 md:w-28" />
-                                    <div className='flex-1'>
-                                        <p className='mb-1 max-sm:text-sm'>{course.courseTitle}</p>
-                                        <Line className='bg-gray-300 rounded-full' strokeWidth={2} percent={progressArray[index] ? (progressArray[index].lectureCompleted * 100) / progressArray[index].totalLectures : 0} />
-                                    </div>
-                                </td>
-                                <td className="px-4 py-3 max-sm:hidden">{calculateCourseDuration(course)}</td>
-                                <td className="px-4 py-3 max-sm:hidden">
-                                    {progressArray[index] && `${progressArray[index].lectureCompleted} / ${progressArray[index].totalLectures}`}
-                                    <span className='text-xs ml-2'>Lectures</span>
-                                </td>
-                                <td className="px-4 py-3 max-sm:text-right">
-                                    <button onClick={() => navigate('/player/' + course._id)} className='px-3 sm:px-5 py-1.5 sm:py-2 bg-blue-600 max-sm:text-xs text-white'>
-                                        {progressArray[index] && progressArray[index].lectureCompleted / progressArray[index].totalLectures === 1 ? 'Completed' : 'On Going'}
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-
-            </div>
-
-            <Footer />
-
-        </>
-    )
-}
-
-export default MyEnrollments
+export default MyEnrollments;
